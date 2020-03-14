@@ -1,13 +1,26 @@
 from flask import Flask, url_for, jsonify, abort, make_response, request
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
+from flask_sqlalchemy import SQLAlchemy
 
 from tasks_data_for_testing import tasks
 
 app = Flask(__name__)
 CORS(app)
+app.config.from_object('config')
+db = SQLAlchemy(app)
 
 auth = HTTPBasicAuth()
+
+
+class Tasks(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(80), unique=True, nullable=False)
+    description = db.Column(db.String(120), unique=False, nullable=True)
+    done = db.Column(db.Boolean, unique=False, default=False)
+
+    def __repr__(self):
+        return '<Task %r>' % self.title
 
 
 @auth.get_password
