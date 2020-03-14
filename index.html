@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="js/vue.js"></script>
+    <script src="js/axios.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <section v-if="errored">
+            <p>We're sorry, we're not able to retrieve this information at the moment, please try back later</p>
+        </section>
+
+        <section v-else>
+
+            <div v-if="loading">Loading...</div>
+            
+            <div v-else>
+                <ul>
+                    <li v-for="item in info" :key="item">
+                        {{ item.uri }} - {{ item.title }} - {{ item.description }} - {{ item.done }}
+                    </li>
+                </ul>
+            </div>
+
+        </section>
+    </div>
+
+    <script>
+        var username = 'alex';
+        var password = 'python';
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    info: null,
+                    loading: true,
+                    errored: false
+                };
+            },
+            mounted() {
+                axios
+                    .get('http://localhost:5000/todo/api/v1.0/tasks', {
+                        auth: {
+                            username: username,
+                            password: password
+                         }
+                     })
+                    .then(response => {
+                        this.info = response.data.tasks;
+                    })
+                    .catch(error => {
+                        console.log(error);
+                        this.errored = true;
+                    })
+                    .finally(() => (this.loading = false));
+            }
+        });
+    </script>
+</body>
+</html>
