@@ -2,13 +2,14 @@ from flask import Flask, url_for, jsonify, abort, make_response, request
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 from flask_sqlalchemy import SQLAlchemy
+from flask_marshmallow import Marshmallow
 
-from tasks_data_for_testing import tasks
 
 app = Flask(__name__)
 CORS(app)
 app.config.from_object('config')
 db = SQLAlchemy(app)
+ma = Marshmallow(app)
 
 auth = HTTPBasicAuth()
 
@@ -19,8 +20,19 @@ class Tasks(db.Model):
     description = db.Column(db.String(120), unique=False, nullable=True)
     done = db.Column(db.Boolean, unique=False, default=False)
 
-    def __repr__(self):
-        return '<Task %r>' % self.title
+
+class TasksSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = Tasks
+
+    id = ma.auto_field()
+    title = ma.auto_field()
+    description = ma.auto_field()
+    done = ma.auto_field()
+
+
+task_schema = TasksSchema()
+tasks_schema = TasksSchema(many=True)
 
 
 @auth.get_password
@@ -58,19 +70,14 @@ def make_public_task(task):
 @app.route('/todo/api/v1.0/tasks', methods=['GET'])
 @auth.login_required
 def get_tasks():
+    tasks = tasks_schema.dump(Tasks.query.all())
     return jsonify({'tasks': [*map(make_public_task, tasks)]})
 
 
 @app.route('/todo/api/v1.0/tasks/<int:task_id>', methods=['GET'])
 @auth.login_required
 def get_task(task_id):
-    # task = list(filter(lambda t: t['id'] == task_id, tasks))
-    # or
-    # task = [i for i in tasks if i['id'] == task_id]
-    # if len(task) == 0:
-    #     abort(404)
-    # return jsonify({'task': task[0]})
-    task = next((i for i in tasks if i['id'] == task_id), False)
+    task = task_schema.dump(Tasks.query.filter_by(id=task_id).first())
     if not task:
         abort(404)
     return jsonify({'task': make_public_task(task)})
@@ -81,20 +88,20 @@ def get_task(task_id):
 def create_task():
     if not request.json or not ('title' in request.json):
         abort(400)
-    task = {
-        'id': tasks[-1]['id'] + 1,
-        'title': request.json['title'],
-        'description': request.json.get('description', ''),
-        'done': False
-    }
-    tasks.append(task)
+    task = Tasks(
+        title=request.json['title'],
+        description=request.json.get('description', '')
+    )
+    db.session.add(task)
+    db.session.commit()
+    task = task_schema.dump(task)
     return jsonify({'task': make_public_task(task)}), 201
 
 
 @app.route('/todo/api/v1.0/tasks/<int:task_id>', methods=['PUT'])
 @auth.login_required
 def update_task(task_id):
-    task = next((i for i in tasks if i['id'] == task_id), False)
+    task = Tasks.query.filter_by(id=task_id).first()
     if not task:
         abort(404)
     if not request.json:
@@ -105,19 +112,22 @@ def update_task(task_id):
         abort(400)
     if 'done' in request.json and not isinstance(request.json['done'], bool):
         abort(400)
-    task['title'] = request.json.get('title', task['title'])
-    task['description'] = request.json.get('description', task['description'])
-    task['done'] = request.json.get('done', task['done'])
+    task.title = request.json.get('title', task.title)
+    task.description = request.json.get('description', task.description)
+    task.done = request.json.get('done', task.done)
+    db.session.commit()
+    task = task_schema.dump(task)
     return jsonify({'task': make_public_task(task)})
 
 
 @app.route('/todo/api/v1.0/tasks/<int:task_id>', methods=['DELETE'])
 @auth.login_required
 def delete_task(task_id):
-    task = next((i for i in tasks if i['id'] == task_id), False)
+    task = Tasks.query.filter_by(id=task_id).first()
     if not task:
         abort(404)
-    tasks.remove(task)
+    db.session.delete(task)
+    db.session.commit()
     return jsonify({'result': True})
 
 

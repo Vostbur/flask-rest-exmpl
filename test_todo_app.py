@@ -12,12 +12,6 @@ class AMainTestCase(TestCase):
         except ModuleNotFoundError:
             self.fail('Module todo_app.py not exists')
 
-    def test_data_for_testing_exists(self):
-        try:
-            import tasks_data_for_testing
-        except ModuleNotFoundError:
-            self.fail('Module task_data_for_testing.py not exists')
-
 
 class BGetTestCase(TestCase):
     def test_get_tasks(self):

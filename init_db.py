@@ -14,6 +14,3 @@ if not os.path.exists('app.db'):
 
 all_task = Tasks.query.all()
 task_2 = Tasks.query.filter_by(id=2).first()
-
-print(all_task)
-print(task_2)
