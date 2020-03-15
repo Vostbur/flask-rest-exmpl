@@ -2,6 +2,7 @@ from flask import Flask, url_for, jsonify, abort, make_response, request
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import exc
 from flask_marshmallow import Marshmallow
 
 
@@ -92,8 +93,12 @@ def create_task():
         title=request.json['title'],
         description=request.json.get('description', '')
     )
-    db.session.add(task)
-    db.session.commit()
+    try:
+        db.session.add(task)
+        db.session.commit()
+    except exc.IntegrityError as e:
+        db.session().rollback()
+        abort(400)
     task = task_schema.dump(task)
     return jsonify({'task': make_public_task(task)}), 201
 
