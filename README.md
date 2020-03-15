@@ -26,3 +26,5 @@ Add new task: POST /todo/api/v1.0/tasks, json={'title': 'test task'}
 Update task: PUT /todo/api/v1.0/tasks/<int:task_id>, json={'done': 'True'}
 Delete task: DELETE /todo/api/v1.0/tasks/<int:task_id>
 ```
+
+![image](css/image.PNG "Screenshot")
