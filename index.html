@@ -70,8 +70,6 @@
     </div>
 
     <script>
-        const username = 'alex';
-        const password = 'python';
         const API_URI = 'http://localhost:5000/todo/api/v1.0/tasks';
 
         var app = new Vue({
@@ -85,12 +83,7 @@
             },
             mounted() {
                 axios
-                    .get(API_URI, {
-                        auth: {
-                            username: username,
-                            password: password
-                         }
-                     })
+                    .get(API_URI)
                     .then(response => {
                         this.info = response.data.tasks;
                     })
@@ -102,12 +95,7 @@
             },
             methods: {
                 delTask: function(uri, index) {
-                    axios.delete(uri,
-                            {auth: {
-                                username: username,
-                                password: password
-                            }}
-                        )
+                    axios.delete(uri)
                         .then(response => {
                             console.log(response);
                             app.info.splice(index,1);
@@ -117,14 +105,7 @@
                         })
                 },
                 updTask: function(item, uri, index) {
-                    axios.put(uri,
-                            {done: !item.done,
-                            },
-                            {auth: {
-                                username: username,
-                                password: password
-                            }}
-                        )
+                    axios.put(uri, {done: !item.done})
                         .then(response => {
                             console.log(response);
                             app.info[index].done = !app.info[index].done;
@@ -143,14 +124,7 @@
             },
             methods: {
                 addTask: function (event) {
-                    axios.post(API_URI,
-                            {title: this.title,
-                            },
-                            {auth: {
-                                username: username,
-                                password: password
-                            }}
-                        )
+                    axios.post(API_URI, { title: this.title })
                         .then(response => {
                             console.log(response);
                             app.info.push(response.data.task);

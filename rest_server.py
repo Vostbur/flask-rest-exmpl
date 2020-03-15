@@ -1,25 +1,30 @@
+import os
 from flask import Flask, url_for, jsonify, abort, make_response, request
 from flask_cors import CORS
-from flask_httpauth import HTTPBasicAuth
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import exc
 from flask_marshmallow import Marshmallow
 
+DB_FILENAME = 'app.db'
+DEBUG = True
 
 app = Flask(__name__)
-CORS(app)
-app.config.from_object('config')
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, DB_FILENAME)
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
-
-auth = HTTPBasicAuth()
+CORS(app)
 
 
 class Tasks(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(80), unique=True, nullable=False)
-    description = db.Column(db.String(120), unique=False, nullable=True)
+    title = db.Column(db.String(255), unique=True, nullable=False)
+    # description = db.Column(db.String(120), unique=False, nullable=True)
     done = db.Column(db.Boolean, unique=False, default=False)
+
+
+if not os.path.exists(DB_FILENAME):
+    db.create_all()
 
 
 class TasksSchema(ma.SQLAlchemySchema):
@@ -28,24 +33,12 @@ class TasksSchema(ma.SQLAlchemySchema):
 
     id = ma.auto_field()
     title = ma.auto_field()
-    description = ma.auto_field()
+    # description = ma.auto_field()
     done = ma.auto_field()
 
 
 task_schema = TasksSchema()
 tasks_schema = TasksSchema(many=True)
-
-
-@auth.get_password
-def get_password(username):
-    if username == 'alex':
-        return 'python'
-    return None
-
-
-@auth.error_handler
-def unauthorized():
-    return make_response(jsonify({'error': 'Unauthorized access'}), 403)
 
 
 @app.errorhandler(400)
@@ -69,14 +62,12 @@ def make_public_task(task):
 
 
 @app.route('/todo/api/v1.0/tasks', methods=['GET'])
-@auth.login_required
 def get_tasks():
     tasks = tasks_schema.dump(Tasks.query.all())
     return jsonify({'tasks': [*map(make_public_task, tasks)]})
 
 
 @app.route('/todo/api/v1.0/tasks/<int:task_id>', methods=['GET'])
-@auth.login_required
 def get_task(task_id):
     task = task_schema.dump(Tasks.query.filter_by(id=task_id).first())
     if not task:
@@ -85,13 +76,12 @@ def get_task(task_id):
 
 
 @app.route('/todo/api/v1.0/tasks', methods=['POST'])
-@auth.login_required
 def create_task():
     if not request.json or not ('title' in request.json):
         abort(400)
     task = Tasks(
         title=request.json['title'],
-        description=request.json.get('description', '')
+        # description=request.json.get('description', '')
     )
     try:
         db.session.add(task)
@@ -104,7 +94,6 @@ def create_task():
 
 
 @app.route('/todo/api/v1.0/tasks/<int:task_id>', methods=['PUT'])
-@auth.login_required
 def update_task(task_id):
     task = Tasks.query.filter_by(id=task_id).first()
     if not task:
@@ -113,12 +102,12 @@ def update_task(task_id):
         abort(400)
     if 'title' in request.json and not isinstance(request.json['title'], str):
         abort(400)
-    if 'description' in request.json and not isinstance(request.json['description'], str):
-        abort(400)
+    # if 'description' in request.json and not isinstance(request.json['description'], str):
+    #     abort(400)
     if 'done' in request.json and not isinstance(request.json['done'], bool):
         abort(400)
     task.title = request.json.get('title', task.title)
-    task.description = request.json.get('description', task.description)
+    # task.description = request.json.get('description', task.description)
     task.done = request.json.get('done', task.done)
     db.session.commit()
     task = task_schema.dump(task)
@@ -126,7 +115,6 @@ def update_task(task_id):
 
 
 @app.route('/todo/api/v1.0/tasks/<int:task_id>', methods=['DELETE'])
-@auth.login_required
 def delete_task(task_id):
     task = Tasks.query.filter_by(id=task_id).first()
     if not task:
@@ -137,4 +125,7 @@ def delete_task(task_id):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    if DEBUG:
+        app.run(host='127.0.0.1', port=5000, debug=True)
+    else:
+        app.run(host='0.0.0.0', port=5000, debug=False)
