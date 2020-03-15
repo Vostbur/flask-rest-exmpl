@@ -19,7 +19,6 @@ CORS(app)
 class Tasks(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), unique=True, nullable=False)
-    # description = db.Column(db.String(120), unique=False, nullable=True)
     done = db.Column(db.Boolean, unique=False, default=False)
 
 
@@ -33,7 +32,6 @@ class TasksSchema(ma.SQLAlchemySchema):
 
     id = ma.auto_field()
     title = ma.auto_field()
-    # description = ma.auto_field()
     done = ma.auto_field()
 
 
@@ -80,8 +78,7 @@ def create_task():
     if not request.json or not ('title' in request.json):
         abort(400)
     task = Tasks(
-        title=request.json['title'],
-        # description=request.json.get('description', '')
+        title=request.json['title']
     )
     try:
         db.session.add(task)
@@ -102,12 +99,9 @@ def update_task(task_id):
         abort(400)
     if 'title' in request.json and not isinstance(request.json['title'], str):
         abort(400)
-    # if 'description' in request.json and not isinstance(request.json['description'], str):
-    #     abort(400)
     if 'done' in request.json and not isinstance(request.json['done'], bool):
         abort(400)
     task.title = request.json.get('title', task.title)
-    # task.description = request.json.get('description', task.description)
     task.done = request.json.get('done', task.done)
     db.session.commit()
     task = task_schema.dump(task)
